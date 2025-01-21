@@ -1,0 +1,44 @@
+!pip install pandas scikit-learn
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
+from sklearn.preprocessing import OneHotEncoder  # Import OneHotEncoder
+
+# Load your data
+data = pd.read_csv(r"/content/ad_10000records.csv")
+
+# Handle missing values in numerical columns
+numeric_data = data.select_dtypes(include=['number'])
+data[numeric_data.columns] = data[numeric_data.columns].fillna(numeric_data.mean())
+
+# Separate features (X) and target (y)
+X = data.drop(columns=["Daily Time Spent on Site", "Age", "Area Income", "Daily Internet Usage", "Clicked on Ad"])  # Exclude target from features
+y = data["Age"]
+
+# Identify categorical features for one-hot encoding
+categorical_features = X.select_dtypes(include=['object']).columns.tolist()
+
+# Create a OneHotEncoder instance
+encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')  # sparse=False for dense output
+
+# Fit and transform the categorical features
+encoded_features = encoder.fit_transform(X[categorical_features])
+
+# Create a DataFrame from the encoded features
+encoded_df = pd.DataFrame(encoded_features, columns=encoder.get_feature_names_out(categorical_features))
+
+# Drop original categorical columns and concatenate encoded features
+X = X.drop(columns=categorical_features)
+X = pd.concat([X, encoded_df], axis=1)
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Create and train the model
+model = LogisticRegression()
+model.fit(X_train, y_train)
+
+# Make predictions and evaluate accuracy
+y_pred = model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred))
